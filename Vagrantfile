@@ -4,8 +4,8 @@
 Vagrant.configure("2") do |config|
 
   config.vm.define "ansible" do |machine|
-    machine.vm.box = "debian/contrib-stretch64"
-    machine.vm.box_url = "debian/contrib-stretch64"
+    machine.vm.box = "chavinje/fr-bull-64"
+    machine.vm.box_url = "chavinje/fr-bull-64"
     machine.vm.hostname = "ansible"
 # Configuration des 2 interfaces 
     machine.vm.network :private_network, ip: "192.168.56.70"
