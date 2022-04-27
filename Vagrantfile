@@ -21,6 +21,6 @@ Vagrant.configure("2") do |config|
       v.customize ["modifyvm", :id, "--natdnsproxy1", "on"]
     end
     machine.vm.provision "shell", path: "scripts/install_sys.sh"
-   # machine.vm.provision "shell", path: "scripts/install_ansible.sh"
+    machine.vm.provision "shell", path: "scripts/install_ansible.sh"
   end
 end
