@@ -12,6 +12,3 @@ apt-get update  -o Dpkg::Progress-Fancy="0" -q -y >> /tmp/install_sys.log 2>&1
 # Update sytem. neccessary ?
 #apt-get upgrade -o Dpkg::Progress-Fancy="0" -q -y >> /tmp/install_sys.log 2>&1
 
-# Configuration for the French keyboard
-sed -i 's/XKBLAYOUT=\"us\"/XKBLAYOUT=\"fr\"/g' /etc/default/keyboard
-sed -i 's/XKBVARIANT=\"\"/XKBVARIANT=\"latin9\"/g' /etc/default/keyboard
