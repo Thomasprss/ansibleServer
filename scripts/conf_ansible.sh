@@ -22,7 +22,16 @@ echo "[Pc-admin]
 [Pc-secu]
  
 10.1.8.3
-10.1.8.4" >> /etc/ansible/hosts 
+10.1.8.4
+
+[gitea]
+
+192.168.56.80
+
+[gitea:vars]
+
+ansible_user=vagrant
+ansible_password=vagrant" >> /etc/ansible/hosts 
 
 echo "[2] disable check ssh key"
 sed -i 's/#host_key_checking = False/host_key_checking = False/g' /etc/ansible/ansible.cfg
