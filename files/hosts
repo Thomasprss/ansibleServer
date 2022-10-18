@@ -1,0 +1,5 @@
+[debian]
+192.168.56.71
+
+[debian:vars]
+ansible_user=vagrant
