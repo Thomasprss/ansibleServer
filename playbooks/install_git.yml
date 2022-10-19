@@ -1,0 +1,9 @@
+---
+- hosts: debian
+  become: yes
+  tasks: 
+    - name: "Install git"
+      apt: 
+      name: git
+      state: latest
+

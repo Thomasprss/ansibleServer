@@ -1,0 +1,15 @@
+---
+- hosts: debian
+  become: yes
+  vars:
+    default_container_image: bkimminich/juice-shop
+    default_container_name: bkimminich/juice-shop
+
+  tasks:
+  - name: "Pull jshop container"
+    shell:
+      cmd: docker pull {{default_container_image}}
+
+  - name: "Create jshop container"
+    shell:
+        cmd: docker run -d --rm -p 3000:3000 {{default_container_name}}
