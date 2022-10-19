@@ -1,0 +1,43 @@
+---
+ - hosts: debian
+   become: yes
+   tasks:
+      - name: Install required system package
+        apt: 
+          pkg:
+          - ca-certificates
+          - curl
+          - software-properties-common
+          - gnupg
+          - lsb-release
+          state: latest
+          update_cache: true
+      - name: Add Docker GPG apt Key
+        apt_key:
+          url: https://download.docker.com/linux/debian/gpg
+          state: present
+
+      - name: Add Docker Repository
+        apt_repository:
+          repo: deb https://download.docker.com/linux/ubuntu focal stable
+          state: present
+
+      - name: Update apt and install docker-ce
+        apt:
+          name: docker-ce
+          state: latest
+          update_cache: true
+      - name: Add "username" user to "docker" group
+        user:
+          name: "vagrant"
+          groups: "docker"
+          append: yes
+
+      - name: Install docker-compose
+        get_url:
+          url: https://github.com/docker/compose/releases/download/1.29.2/docker-compose-Linux-x86_64
+          dest: /usr/local/bin/docker-compose
+          mode: 'u+x,g+x'
+      - name: "Add permission to docker-compose"
+        shell:
+          cmd: sudo chmod +x /usr/local/bin/docker-compose 
