@@ -1,0 +1,144 @@
+---
+  - hosts: debian
+    vars:
+      - default_easyrsa_folder: /usr/share/easy-rsa
+      - default_server_folder: /etc/openvpn/server
+    tasks: 
+      - name: "Update apt packages"
+        become: yes
+        apt:
+          upgrade: yes
+
+      - name: Install openvpn
+        become: yes
+        package:
+          name: "{{ item }}"
+          state: present
+        with_items:
+          - openvpn
+          - easy-rsa
+          - ufw
+        
+      - name: Create eas-rsa repo
+        file:
+          path: /home/vagrant/easy-rsa
+          state: directory
+       
+      - name: Copy Vars file easy-rsa
+        become: yes
+        copy:
+          src: /vagrant/files/openvpn/vars
+          dest: "{{default_easyrsa_folder}}"
+
+      - name: Change perm
+        become: yes
+        file: dest="{{default_easyrsa_folder}}/vars" mode=+X
+
+      - name: OpenVPN | PKI | Intialize PKI
+        become: yes
+        shell: echo 'yes' | ./easyrsa init-pki
+        args:
+          chdir: "{{default_easyrsa_folder}}"
+        register: init
+
+      - debug: msg="{{init.stdout}}"
+
+      - name: Create serv certificates
+        become: yes
+        shell: echo 'FR' | ./easyrsa build-ca nopass
+        args:
+          chdir: "{{default_easyrsa_folder}}"
+        register: buildca
+
+      - debug: msg="{{buildca.stdout}}"
+      
+      - name: Create pub and private keys
+        become: yes
+        shell: echo 'FR' | ./easyrsa gen-req server nopass
+        args:
+          chdir: "{{default_easyrsa_folder}}"
+        register: keys
+
+      - debug: msg="{{keys.stdout}}"
+
+      - name: Sign key
+        become: yes
+        shell: echo 'yes' | ./easyrsa sign-req server server
+        args:
+          chdir: "{{default_easyrsa_folder}}"
+        register: sign
+
+      - debug: msg="{{sign.stdout}}"
+
+      - name: Diffie-hellman kay
+        become: yes
+        shell: ./easyrsa gen-dh
+        args:
+          chdir: "{{default_easyrsa_folder}}"
+        register: dif
+
+      - debug: msg="{{dif.stdout}}"
+
+      - name: Openvpn key 
+        become: yes
+        shell: openvpn --genkey secret ta.key
+        args:
+          chdir: "{{default_easyrsa_folder}}"
+
+      - name: Copy secret key to server folder
+        command: "sudo cp {{default_easyrsa_folder}}/ta.key {{default_server_folder}}"
+
+      - name: Copy server key to server folder
+        command: "sudo cp {{default_easyrsa_folder}}/pki/private/server.key {{default_server_folder}}"
+
+      - name: Copy server crt to server folder
+        command: "sudo cp {{default_easyrsa_folder}}/pki/issued/server.crt {{default_server_folder}}"
+        
+      - name: Copy ca cert and dh to server folder
+        command: "sudo cp {{default_easyrsa_folder}}/pki/ca.crt {{default_server_folder}}"
+      
+      - name: Copy ca cert and dh to server folder
+        command: "sudo cp {{default_easyrsa_folder}}/pki/dh.pem {{default_server_folder}}"
+
+      - name: Copy server conf to server folder
+        command: "sudo cp /vagrant/files/openvpn/server.conf {{default_server_folder}}"
+      
+      - name: add ip forward sysctl.conf
+        become: yes
+        replace:
+          path: /etc/sysctl.conf
+          regexp: '#net.ipv4.ip_forward=1'
+          replace: 'net.ipv4.ip_forward=1'
+
+      - name: save and load config
+        become: yes
+        command: sysctl -p
+
+      - name: add postrouting in firewall
+        command: sudo iptables -t nat -A POSTROUTING -s 10.8.0.0/16 -o enp0s8 -j MASQUERADE
+
+      - name: Start a service with systemd openvpn
+        become: yes
+        systemd:
+          name: openvpn-server@server.service
+          state: restarted
+        
+      - name: checking service status
+        command: systemctl status "{{ item }}"
+        with_items:
+        - openvpn-server@server.service
+        register: result
+        ignore_errors: yes
+      - name: showing report
+        debug:
+          var: result
+      
+# Allow TUN interface connections to OpenVPN server
+#iptables -A INPUT -i tun+ -j ACCEPT
+      - name: Allow tun interface connections to OpenVPN Server
+        command: sudo iptables -A INPUT -i tun+ -j ACCEPT
+
+ # Allow TUN interface connections to be forwarded through other interfaces
+#iptables -A FORWARD -i tun+ -j ACCEPT
+      - name: Allow TUN interface connections to be forwarded through other interfaces
+        command: sudo iptables -A FORWARD -i tun+ -j ACCEPT

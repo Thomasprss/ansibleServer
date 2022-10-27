@@ -1,0 +1,76 @@
+#########
+#
+# To generate a client ovpn conf => ansible-playbook /pathToPlaybook/generate_client_vpn.yml -e "client=clientName"
+#
+#########
+---
+  - hosts: debian
+    vars:
+      - default_easyrsa_folder: /usr/share/easy-rsa
+      - default_client_folder: /home/vagrant/client-openvpn
+    tasks: 
+      - name: Create eas-rsa repo
+        file:
+          path: /home/vagrant/client-openvpn
+          state: directory
+      
+      - name: give auth to the new folder
+        become: yes
+        file: 
+          path: "{{default_client_folder}}" 
+          mode: "0700"
+      
+      - name: Create {{client}} key
+        become: yes
+        shell: echo '' | ./easyrsa gen-req {{client}} nopass
+        args:
+          chdir: "{{default_easyrsa_folder}}"
+        register: keys
+        ignore_errors: yes
+
+      - debug: msg="{{keys.stdout}}"
+
+      - name: Sign key
+        become: yes
+        shell: echo 'yes' | ./easyrsa sign-req client {{client}}
+        args:
+          chdir: "{{default_easyrsa_folder}}"
+        register: sign
+        ignore_errors: yes
+
+      - debug: msg="{{sign.stdout}}"
+
+      - name: Copy secret key to client folder
+        command: "sudo cp {{default_easyrsa_folder}}/ta.key {{default_client_folder}}"
+      
+      - name: Copy {{client}} key to server folder
+        command: "sudo cp {{default_easyrsa_folder}}/pki/private/{{client}}.key {{default_client_folder}}"
+
+      - name: Copy {{client}} crt to client folder
+        command: "sudo cp {{default_easyrsa_folder}}/pki/issued/{{client}}.crt {{default_client_folder}}"
+
+      - name: Copy ca cert to client folder
+        command: "sudo cp {{default_easyrsa_folder}}/pki/ca.crt {{default_client_folder}}"
+
+      - name: Copy {{client}} conf and make config script to client folder
+        become: yes
+        copy:
+          src:  /vagrant/files/openvpn/{{ item }}
+          dest: "{{default_client_folder}}"
+        with_items:
+          - "client.conf"
+          - "make_config.sh"
+      
+      - name: Changing perm make_config.sh, adding "+x"
+        become: yes
+        file: dest="{{default_client_folder}}/make_config.sh" mode=a+x
+
+      - name: make conf client
+        become: yes
+        shell: ./make_config.sh {{client}}
+        args:
+          chdir: "{{default_client_folder}}" 
+        
+      - name: Extract {{client}}.ovpn file
+        command: "sudo cp {{ default_client_folder }}/{{ client }}.ovpn /vagrant/files/clients"
+          
